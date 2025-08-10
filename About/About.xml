@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ModMetaData>
+  <name>Gravship Range On Map</name>
+  <description>
+    Always shows your gravship range on the world map.\n
+    Source: https://github.com/imagitama/RimWorldGravshipRangeOnMapMod
+  </description>
+  <author>Imagitama</author>
+  <packageId>imagitama.rimworldgravshiprangeonmap</packageId>
+  <supportedVersions>
+    <li>1.6</li>
+  </supportedVersions>
+</ModMetaData>
