@@ -15,6 +15,10 @@ namespace RimWorldGravshipRangeOnMapMod
 
         public static void Postfix()
         {
+            // if the backdrop of a space map
+            if (WorldRendererUtility.WorldBackgroundNow)
+                return;
+
             Logger.LogMessage("Postfix started");
 
             var engine = Find.Maps
