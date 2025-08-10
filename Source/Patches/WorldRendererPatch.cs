@@ -53,7 +53,18 @@ namespace RimWorldGravshipRangeOnMapMod
                     fuelFactor: engine.FuelUseageFactor);
                 Logger.LogMessage($"Fuel-limited distance: {radius}");
 
-                PlanetTile planetTile = engine.Map.Tile;
+                PlanetTile cachedClosestLayerTile = PlanetTile.Invalid;
+                PlanetTile curTile = engine.Map.Tile;
+                PlanetTile planetTile = curTile;
+
+                // if in "space" view
+                if (curTile.Layer != Find.WorldSelector.SelectedLayer)
+                {
+                    if (cachedClosestLayerTile.Layer != Find.WorldSelector.SelectedLayer || !cachedClosestLayerTile.Valid)
+                        cachedClosestLayerTile = Find.WorldSelector.SelectedLayer.GetClosestTile(curTile);
+                    planetTile = cachedClosestLayerTile;
+                }
+
                 GenDraw.DrawWorldRadiusRing(planetTile, maxDistance, CompPilotConsole.GetThrusterRadiusMat(planetTile));
 
                 if (radius < maxDistance)
