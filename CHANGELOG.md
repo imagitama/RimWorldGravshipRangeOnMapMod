@@ -1,3 +1,8 @@
+# 1.2.0
+
+- fix lag on gravship launch (double render)
+- fix excessive logging
+
 # 1.1.1
 
 - fix range visible in space maps

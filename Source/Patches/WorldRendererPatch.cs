@@ -4,6 +4,7 @@ using Verse;
 using RimWorld;
 using RimWorld.Planet;
 using System.Reflection;
+using RimWorldGravshipRangeOnMapMod;
 
 namespace RimWorldGravshipRangeOnMapMod
 {
@@ -13,13 +14,20 @@ namespace RimWorldGravshipRangeOnMapMod
         private static readonly MethodInfo getMaxLaunchDistanceMI =
             AccessTools.Method(typeof(CompPilotConsole), "GetMaxLaunchDistance");
 
+        private static bool? WasGravshipFound;
+        private static bool? WasConsoleFound;
+        private static float? lastRadius;
+        private static float? lastMaxDistance;
+
         public static void Postfix()
         {
             // if the backdrop of a space map
             if (WorldRendererUtility.WorldBackgroundNow)
                 return;
 
-            Logger.LogMessage("Postfix started");
+            // avoid lag from double render
+            if (GravshipLaunchTracker.IsChoosingDestination)
+                return;
 
             var engine = Find.Maps
                 .SelectMany(m => m.listerThings.AllThings)
@@ -28,34 +36,51 @@ namespace RimWorldGravshipRangeOnMapMod
 
             if (engine == null)
             {
-                Log.Warning("No player gravship engine found on any map");
+                if (WasGravshipFound == null || WasGravshipFound == true)
+                {
+                    WasGravshipFound = false;
+                    Logger.LogMessage("No player gravship engine found on any map");
+                }
                 return;
             }
 
-            Logger.LogMessage($"Found gravship engine '{engine.Label}' on map '{engine.Map?.Parent?.Label ?? "Unknown"}'.");
+            if (WasGravshipFound == null || WasGravshipFound == false)
+            {
+                WasGravshipFound = true;
+                Logger.LogMessage($"Found gravship engine '{engine.Label}' on map '{engine.Map?.Parent?.Label ?? "Unknown"}'");
+            }
 
-            // Find the CompPilotConsole that's linked to this engine
-            var console = engine.Map.listerThings.AllThings
+            CompPilotConsole console = engine.Map.listerThings.AllThings
                 .Select(t => t.TryGetComp<CompPilotConsole>())
                 .FirstOrDefault(c => c != null && c.engine == engine);
 
             if (console == null)
             {
-                Log.Warning("No pilot console linked to this engine was found");
+                if (WasConsoleFound == null || WasConsoleFound == true)
+                {
+                    WasConsoleFound = false;
+                    Logger.LogMessage("No pilot console linked to this engine was found");
+                }
                 return;
+            }
+
+
+            if (WasGravshipFound == null || WasGravshipFound == false)
+            {
+                WasConsoleFound = true;
+                Logger.LogMessage($"Found console '{console.ToString()}'");
             }
 
             try
             {
                 object result = getMaxLaunchDistanceMI.Invoke(console, new object[] { PlanetLayer.Selected });
                 int maxDistance = (int)result;
-                Logger.LogMessage($"Max launch distance from GetMaxLaunchDistance: {maxDistance}");
 
                 int radius = GravshipUtility.MaxDistForFuel(engine.TotalFuel,
                     engine.Map.Tile.Layer,
                     PlanetLayer.Selected,
                     fuelFactor: engine.FuelUseageFactor);
-                Logger.LogMessage($"Fuel-limited distance: {radius}");
+
 
                 PlanetTile cachedClosestLayerTile = PlanetTile.Invalid;
                 PlanetTile curTile = engine.Map.Tile;
@@ -75,10 +100,23 @@ namespace RimWorldGravshipRangeOnMapMod
                 {
                     GenDraw.DrawWorldRadiusRing(planetTile, radius, CompPilotConsole.GetFuelRadiusMat(planetTile));
                 }
+
+                if (lastMaxDistance != maxDistance)
+                {
+                    Logger.LogMessage($"Max launch distance: {maxDistance}");
+                }
+
+                if (lastRadius != radius)
+                {
+                    Logger.LogMessage($"Fuel-limited distance: {radius}");
+                }
+
+                lastMaxDistance = maxDistance;
+                lastRadius = radius;
             }
             catch (System.Exception ex)
             {
-                Log.Error($"Error calling GetMaxLaunchDistance: {ex}");
+                Log.Error($"Error: {ex}");
             }
         }
     }
